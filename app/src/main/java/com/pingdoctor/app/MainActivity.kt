@@ -8,8 +8,10 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -20,7 +22,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
@@ -29,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +48,7 @@ import com.pingdoctor.app.model.TargetService
 import com.pingdoctor.app.model.TestStatus
 import com.pingdoctor.app.parser.ConfigParser
 import com.pingdoctor.app.tester.PingTester
+import com.pingdoctor.app.ui.QrHelper
 import com.pingdoctor.app.ui.theme.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -71,6 +78,13 @@ fun PingDoctorApp() {
     var isTesting by remember { mutableStateOf(false) }
     var testJob by remember { mutableStateOf<Job?>(null) }
     var testedCount by remember { mutableStateOf(0) }
+
+    // Dialog States
+    var showSubDialog by remember { mutableStateOf(false) }
+    var subUrlInput by remember { mutableStateOf("") }
+    var isFetchingSub by remember { mutableStateOf(false) }
+
+    var qrConfig by remember { mutableStateOf<ProxyConfig?>(null) }
 
     val layoutDirection = if (isPersian) LayoutDirection.Rtl else LayoutDirection.Ltr
 
@@ -132,7 +146,7 @@ fun PingDoctorApp() {
                                     color = TextPrimary
                                 )
                                 Text(
-                                    text = if (isPersian) "تست بازگشایی یوتیوب و تلگرام" else "YouTube & Telegram Unblock Tester",
+                                    text = if (isPersian) "تست بازگشایی یوتیوب و مدیریت ساب" else "YouTube Unblock & Sub Manager",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = TextSecondary
                                 )
@@ -293,6 +307,7 @@ fun PingDoctorApp() {
                 // 3. Action Buttons Section
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Row 1: Paste & Import Sub & Test
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -308,7 +323,7 @@ fun PingDoctorApp() {
                                             configs = (configs + parsed).distinctBy { it.rawUri }
                                             Toast.makeText(
                                                 context,
-                                                if (isPersian) "${parsed.size} کانفیگ شناسایی و اضافه شد" else "Imported ${parsed.size} configs",
+                                                if (isPersian) "${parsed.size} کانفیگ شناسایی شد" else "Imported ${parsed.size} configs",
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         } else {
@@ -325,9 +340,22 @@ fun PingDoctorApp() {
                                 colors = ButtonDefaults.buttonColors(containerColor = CardBg),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
                             ) {
-                                Icon(Icons.Default.ContentPaste, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (isPersian) "پیست (Paste)" else "Paste", fontSize = 12.sp, color = TextPrimary)
+                                Icon(Icons.Default.ContentPaste, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (isPersian) "پیست" else "Paste", fontSize = 11.sp, color = TextPrimary)
+                            }
+
+                            // Sub URL Button
+                            Button(
+                                onClick = { showSubDialog = true },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = CardBg),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
+                            ) {
+                                Icon(Icons.Default.Download, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (isPersian) "لینک ساب" else "Sub URL", fontSize = 11.sp, color = TextPrimary)
                             }
 
                             // Start / Stop Test Button
@@ -335,7 +363,7 @@ fun PingDoctorApp() {
                                 onClick = {
                                     if (isTesting) stopTesting() else startTesting()
                                 },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1.2f),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (isTesting) RoseDead else CyanPrimary
@@ -347,25 +375,50 @@ fun PingDoctorApp() {
                                     tint = DarkBg,
                                     modifier = Modifier.size(18.dp)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = if (isTesting) {
                                         if (isPersian) "توقف" else "Stop"
                                     } else {
                                         if (isPersian) "تست ${selectedTarget.labelFa}" else "Test ${selectedTarget.labelEn}"
                                     },
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = DarkBg
                                 )
                             }
                         }
 
-                        // Secondary actions: Purge Dead & Copy Working
+                        // Row 2: Sort by Ping & Purge Dead & Copy Alive & Export Sub
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            // Sort by Ping
+                            OutlinedButton(
+                                onClick = {
+                                    configs = configs.sortedWith(
+                                        compareBy(
+                                            { if (it.status == TestStatus.ALIVE) 0 else 1 },
+                                            { if (it.pingMs > 0) it.pingMs else Long.MAX_VALUE }
+                                        )
+                                    )
+                                    Toast.makeText(
+                                        context,
+                                        if (isPersian) "مرتب‌سازی بر اساس پینگ انجام شد ⚡" else "Sorted by latency ⚡",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+                                enabled = configs.any { it.status == TestStatus.ALIVE }
+                            ) {
+                                Icon(Icons.Default.Sort, contentDescription = null, tint = CyanLight, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (isPersian) "سورت" else "Sort", fontSize = 10.sp, color = TextPrimary)
+                            }
+
                             // Purge Dead
                             OutlinedButton(
                                 onClick = {
@@ -384,9 +437,9 @@ fun PingDoctorApp() {
                                 border = androidx.compose.foundation.BorderStroke(1.dp, RoseDead.copy(alpha = 0.5f)),
                                 enabled = configs.any { it.status == TestStatus.DEAD }
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (isPersian) "حذف سوخته‌ها" else "Purge Dead", fontSize = 11.sp)
+                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (isPersian) "حذف سوخته" else "Purge", fontSize = 10.sp)
                             }
 
                             // Copy Working
@@ -401,12 +454,6 @@ fun PingDoctorApp() {
                                             if (isPersian) "${alive.size} کانفیگ سالم کپی شد 📋" else "Copied ${alive.size} working configs",
                                             Toast.LENGTH_SHORT
                                         ).show()
-                                    } else {
-                                        Toast.makeText(
-                                            context,
-                                            if (isPersian) "هنوز کانفیگ سالمی تأیید نشده است" else "No alive configs tested yet",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
@@ -415,9 +462,34 @@ fun PingDoctorApp() {
                                 border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldFast.copy(alpha = 0.5f)),
                                 enabled = configs.any { it.status == TestStatus.ALIVE }
                             ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (isPersian) "کپی سالم‌ها" else "Copy Alive", fontSize = 11.sp)
+                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (isPersian) "کپی سالم‌ها" else "Copy", fontSize = 10.sp)
+                            }
+
+                            // Export Sub Base64
+                            OutlinedButton(
+                                onClick = {
+                                    val alive = configs.filter { it.status == TestStatus.ALIVE }
+                                    if (alive.isNotEmpty()) {
+                                        val b64 = ConfigParser.generateCleanSubBase64(alive)
+                                        clipboard.setPrimaryClip(ClipData.newPlainText("Sub Base64", b64))
+                                        Toast.makeText(
+                                            context,
+                                            if (isPersian) "ساب به صورت Base64 کپی شد 📥" else "Copied Base64 Sub 📥",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                },
+                                modifier = Modifier.weight(1.1f),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = CyanLight),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, CyanLight.copy(alpha = 0.5f)),
+                                enabled = configs.any { it.status == TestStatus.ALIVE }
+                            ) {
+                                Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (isPersian) "اکسپورت ساب" else "Export Sub", fontSize = 10.sp)
                             }
                         }
                     }
@@ -512,7 +584,7 @@ fun PingDoctorApp() {
                                     color = TextPrimary
                                 )
                                 Text(
-                                    text = if (isPersian) "لینک‌های VLESS, VMess, Trojan یا SS را کپی کنید و دکمه «پیست» را بزنید." else "Copy your proxy links and tap 'Paste' to begin diagnosis.",
+                                    text = if (isPersian) "لینک‌های کانفیگ یا لینک سابسکریپشن خود را وارد کنید." else "Paste proxy links or enter subscription URL.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = TextSecondary,
                                     textAlign = TextAlign.Center
@@ -522,11 +594,12 @@ fun PingDoctorApp() {
                     }
                 }
 
-                // Config Items
+                // Config Items (Tap opens QR Code Dialog)
                 items(displayedConfigs, key = { it.id }) { item ->
                     ConfigItemRow(
                         item = item,
                         isPersian = isPersian,
+                        onClick = { qrConfig = item },
                         onDelete = {
                             configs = configs.filterNot { it.id == item.id }
                         }
@@ -537,6 +610,155 @@ fun PingDoctorApp() {
                     Spacer(modifier = Modifier.height(20.dp))
                 }
             }
+        }
+
+        // Sub URL Import Dialog
+        if (showSubDialog) {
+            AlertDialog(
+                onDismissRequest = { if (!isFetchingSub) showSubDialog = false },
+                title = { Text(if (isPersian) "دریافت سابسکریپشن" else "Import Subscription", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = if (isPersian) "آدرس لینک اشتراک (https://...) را وارد کنید:" else "Enter Subscription HTTP/HTTPS URL:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
+                        OutlinedTextField(
+                            value = subUrlInput,
+                            onValueChange = { subUrlInput = it },
+                            placeholder = { Text("https://example.com/sub/...", fontSize = 12.sp) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        if (isFetchingSub) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = CyanPrimary)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(if (isPersian) "در حال دانلود و پردازش..." else "Downloading...", fontSize = 12.sp, color = CyanLight)
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (subUrlInput.isNotBlank()) {
+                                isFetchingSub = true
+                                scope.launch {
+                                    val fetched = ConfigParser.fetchSubscriptionUrl(subUrlInput)
+                                    isFetchingSub = false
+                                    if (fetched.isNotEmpty()) {
+                                        configs = (configs + fetched).distinctBy { it.rawUri }
+                                        showSubDialog = false
+                                        subUrlInput = ""
+                                        Toast.makeText(
+                                            context,
+                                            if (isPersian) "${fetched.size} کانفیگ از ساب دریافت شد" else "Imported ${fetched.size} configs from sub",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            if (isPersian) "خطا در دریافت یا پردازش لینک ساب" else "Failed to fetch subscription",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary),
+                        enabled = !isFetchingSub
+                    ) {
+                        Text(if (isPersian) "دریافت و اضافه" else "Import", color = DarkBg, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSubDialog = false }, enabled = !isFetchingSub) {
+                        Text(if (isPersian) "انصراف" else "Cancel", color = TextSecondary)
+                    }
+                },
+                containerColor = CardBg,
+                shape = RoundedCornerShape(16.dp)
+            )
+        }
+
+        // QR Code Dialog
+        qrConfig?.let { targetConfig ->
+            val qrBitmap = remember(targetConfig.rawUri) {
+                QrHelper.generateQrBitmap(targetConfig.rawUri, 512)
+            }
+
+            AlertDialog(
+                onDismissRequest = { qrConfig = null },
+                title = {
+                    Text(
+                        text = targetConfig.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        if (qrBitmap != null) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color.White,
+                                modifier = Modifier.padding(8.dp)
+                            ) {
+                                Image(
+                                    bitmap = qrBitmap.asImageBitmap(),
+                                    contentDescription = "QR Code",
+                                    modifier = Modifier.size(220.dp).padding(8.dp)
+                                )
+                            }
+                        } else {
+                            Text(if (isPersian) "خطا در تولید بارکد QR" else "Failed to generate QR")
+                        }
+
+                        Text(
+                            text = if (isPersian) "با دوربین گوشی دیگر اسکن کنید یا لینک را کپی کنید." else "Scan with another device or copy link.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Config Link", targetConfig.rawUri))
+                            Toast.makeText(
+                                context,
+                                if (isPersian) "لینک کانفیگ کپی شد 📋" else "Config link copied",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary)
+                    ) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = null, tint = DarkBg, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(if (isPersian) "کپی لینک" else "Copy Link", color = DarkBg, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { qrConfig = null }) {
+                        Text(if (isPersian) "بستن" else "Close", color = TextSecondary)
+                    }
+                },
+                containerColor = CardBg,
+                shape = RoundedCornerShape(16.dp)
+            )
         }
     }
 }
@@ -562,11 +784,13 @@ fun MetricBox(
 fun ConfigItemRow(
     item: ProxyConfig,
     isPersian: Boolean,
+    onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .border(
                 1.dp,
                 when (item.status) {

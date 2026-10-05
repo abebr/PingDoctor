@@ -149,4 +149,31 @@ object ConfigParser {
             return null
         }
     }
+
+    suspend fun fetchSubscriptionUrl(urlStr: String): List<ProxyConfig> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            val url = java.net.URL(urlStr.trim())
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 8000
+            conn.readTimeout = 8000
+            conn.setRequestProperty("User-Agent", "v2rayNG/1.8.19")
+            conn.instanceFollowRedirects = true
+
+            val text = conn.inputStream.bufferedReader().use { it.readText() }
+            val decoded = try {
+                val clean = text.trim().replace("\n", "").replace("\r", "")
+                String(Base64.decode(clean, Base64.DEFAULT))
+            } catch (e: Exception) {
+                text
+            }
+            parseClipboardText(if (decoded.contains("://")) decoded else text)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    fun generateCleanSubBase64(configs: List<ProxyConfig>): String {
+        val rawList = configs.joinToString("\n") { it.rawUri }
+        return Base64.encodeToString(rawList.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+    }
 }
