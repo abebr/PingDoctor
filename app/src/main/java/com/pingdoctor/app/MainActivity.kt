@@ -279,9 +279,9 @@ fun PingDoctorApp() {
                                         containerColor = CardBg,
                                         labelColor = TextSecondary
                                     ),
-                                    border = FilterChipDefaults.filterChipBorder(
-                                        borderColor = if (isSelected) CyanPrimary else CardBorder,
-                                        selectedBorderColor = CyanPrimary
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isSelected) CyanPrimary else CardBorder
                                     ),
                                     shape = RoundedCornerShape(10.dp)
                                 )
