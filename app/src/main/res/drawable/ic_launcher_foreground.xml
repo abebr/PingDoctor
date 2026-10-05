@@ -1,0 +1,37 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer Ping Radar Circles -->
+    <path
+        android:strokeColor="#1E293B"
+        android:strokeWidth="2"
+        android:pathData="M54,20 A34,34 0 1,1 54,20.01"/>
+
+    <path
+        android:strokeColor="#334155"
+        android:strokeWidth="2"
+        android:pathData="M54,32 A22,22 0 1,1 54,32.01"/>
+
+    <!-- Pulse Line (ECG / Ping Doctor) -->
+    <path
+        android:strokeColor="#06B6D4"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M24,54 L40,54 L46,40 L52,68 L58,46 L62,56 L68,54 L84,54"/>
+
+    <!-- Emerald Target Dot -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M54,54 A5,5 0 1,1 54,54.01"/>
+
+    <!-- Small Cross / Stethoscope Touch in Top Right -->
+    <path
+        android:strokeColor="#10B981"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M76,28 L76,38 M71,33 L81,33"/>
+</vector>

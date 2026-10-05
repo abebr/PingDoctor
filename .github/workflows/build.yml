@@ -1,0 +1,53 @@
+name: Build PingDoctor APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --stacktrace
+
+    - name: Upload Debug APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: PingDoctor-Debug-APK
+        path: app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Create Release and Upload APK
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+      with:
+        tag_name: v1.0.0
+        name: "PingDoctor v1.0.0"
+        body: |
+          ### ⚡ PingDoctor Android App (پینگ‌دکتر)
+          - **Smart Clipboard Parser**: VLESS, VMess, Trojan, Shadowsocks
+          - **Concurrent TCP & TLS Handshake Tester** (Tests SNI validity & connection latency in seconds)
+          - **One-Tap Purge Dead**: Remove all timed-out and blocked configs instantly
+          - **One-Tap Copy Working**: Copy alive configs ready to paste into v2rayNG / Nekobox
+          - **Bilingual UI**: Persian (فارسی) & English (EN) with Vazirmatn font
+        files: app/build/outputs/apk/debug/app-debug.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
