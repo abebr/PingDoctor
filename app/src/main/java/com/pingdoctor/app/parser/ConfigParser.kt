@@ -46,6 +46,7 @@ object ConfigParser {
         val rawName = uri.fragment ?: "$protocol-$host"
         val name = try { URLDecoder.decode(rawName, "UTF-8") } catch (e: Exception) { rawName }
 
+        val userInfo = uri.userInfo
         val security = uri.getQueryParameter("security")?.lowercase()
         val sni = uri.getQueryParameter("sni") ?: uri.getQueryParameter("peer")
         val isTls = security == "tls" || security == "reality" || port == 443 || !sni.isNullOrBlank()
@@ -57,6 +58,8 @@ object ConfigParser {
             name = name.ifBlank { "$protocol-$host:$port" },
             host = host,
             port = port,
+            userOrUuid = userInfo,
+            passwordOrKey = userInfo,
             sni = sni,
             isTls = isTls
         )
@@ -128,6 +131,7 @@ object ConfigParser {
             val name = json.optString("ps", "VMess-$host:$port")
             val tls = json.optString("tls").lowercase()
             val sni = json.optString("sni").ifBlank { null }
+            val id = json.optString("id").ifBlank { null }
             val isTls = tls == "tls" || port == 443 || !sni.isNullOrBlank()
 
             return ProxyConfig(
@@ -137,6 +141,7 @@ object ConfigParser {
                 name = name,
                 host = host,
                 port = port,
+                userOrUuid = id,
                 sni = sni,
                 isTls = isTls
             )

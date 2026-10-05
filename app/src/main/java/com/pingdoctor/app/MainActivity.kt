@@ -7,18 +7,16 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
@@ -40,6 +38,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pingdoctor.app.model.ProxyConfig
+import com.pingdoctor.app.model.TargetService
 import com.pingdoctor.app.model.TestStatus
 import com.pingdoctor.app.parser.ConfigParser
 import com.pingdoctor.app.tester.PingTester
@@ -67,6 +66,8 @@ fun PingDoctorApp() {
 
     var isPersian by remember { mutableStateOf(true) }
     var configs by remember { mutableStateOf(listOf<ProxyConfig>()) }
+    var selectedTarget by remember { mutableStateOf(TargetService.YOUTUBE) }
+    var filterMode by remember { mutableStateOf("ALL") } // ALL, ALIVE, DEAD
     var isTesting by remember { mutableStateOf(false) }
     var testJob by remember { mutableStateOf<Job?>(null) }
     var testedCount by remember { mutableStateOf(0) }
@@ -85,16 +86,29 @@ fun PingDoctorApp() {
         testedCount = 0
 
         // Reset status to testing
-        configs = configs.map { it.copy(status = TestStatus.TESTING, pingMs = -1, errorMessage = null) }
+        configs = configs.map {
+            it.copy(
+                status = TestStatus.TESTING,
+                pingMs = -1,
+                testedService = selectedTarget,
+                errorMessage = null
+            )
+        }
 
         testJob = scope.launch {
-            PingTester.testAll(configs, concurrency = 20) { updated ->
+            PingTester.testAll(configs, target = selectedTarget, concurrency = 20) { updated ->
                 configs = configs.map { if (it.id == updated.id) updated else it }
                 testedCount++
             }
             isTesting = false
             testJob = null
         }
+    }
+
+    val displayedConfigs = when (filterMode) {
+        "ALIVE" -> configs.filter { it.status == TestStatus.ALIVE }
+        "DEAD" -> configs.filter { it.status == TestStatus.DEAD }
+        else -> configs
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
@@ -118,7 +132,7 @@ fun PingDoctorApp() {
                                     color = TextPrimary
                                 )
                                 Text(
-                                    text = if (isPersian) "تست و تفکیک هوشمند کانفیگ‌ها" else "Smart Proxy Cleaner & Tester",
+                                    text = if (isPersian) "تست بازگشایی یوتیوب و تلگرام" else "YouTube & Telegram Unblock Tester",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = TextSecondary
                                 )
@@ -171,21 +185,18 @@ fun PingDoctorApp() {
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                // Total
                                 MetricBox(
                                     title = if (isPersian) "کل کانفیگ‌ها" else "Total",
                                     value = total.toString(),
                                     color = TextPrimary,
                                     modifier = Modifier.weight(1f)
                                 )
-                                // Alive
                                 MetricBox(
                                     title = if (isPersian) "سالم و سریع" else "Alive",
                                     value = if (avgPing > 0) "$aliveCount (${avgPing}ms)" else "$aliveCount",
                                     color = EmeraldFast,
                                     modifier = Modifier.weight(1f)
                                 )
-                                // Dead
                                 MetricBox(
                                     title = if (isPersian) "سوخته / بلاک" else "Dead",
                                     value = deadCount.toString(),
@@ -205,7 +216,7 @@ fun PingDoctorApp() {
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Text(
-                                            text = if (isPersian) "در حال تست زنده..." else "Testing alive...",
+                                            text = if (isPersian) "تست زنده اتصال به ${selectedTarget.labelFa}..." else "Testing connection to ${selectedTarget.labelEn}...",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = CyanPrimary
                                         )
@@ -230,7 +241,56 @@ fun PingDoctorApp() {
                     }
                 }
 
-                // 2. Action Buttons Section
+                // 2. Target Service Selector (YouTube, Google, Telegram, Cloudflare)
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = if (isPersian) "🎯 مقصد سنجش کیفیت واقعی:" else "🎯 Real Target Service Test:",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = TextPrimary
+                        )
+
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(TargetService.values()) { target ->
+                                val isSelected = selectedTarget == target
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = {
+                                        if (!isTesting) selectedTarget = target
+                                    },
+                                    label = {
+                                        Text(
+                                            text = when (target) {
+                                                TargetService.YOUTUBE -> "▶️ " + if (isPersian) "یوتیوب" else "YouTube"
+                                                TargetService.GOOGLE -> "🌐 " + if (isPersian) "گوگل" else "Google"
+                                                TargetService.TELEGRAM -> "✈️ " + if (isPersian) "تلگرام" else "Telegram"
+                                                TargetService.CLOUDFLARE -> "⚡ " + if (isPersian) "کلودفلر" else "Cloudflare"
+                                            },
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = CyanPrimary.copy(alpha = 0.25f),
+                                        selectedLabelColor = CyanLight,
+                                        containerColor = CardBg,
+                                        labelColor = TextSecondary
+                                    ),
+                                    border = FilterChipDefaults.filterChipBorder(
+                                        borderColor = if (isSelected) CyanPrimary else CardBorder,
+                                        selectedBorderColor = CyanPrimary
+                                    ),
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 3. Action Buttons Section
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(
@@ -292,7 +352,7 @@ fun PingDoctorApp() {
                                     text = if (isTesting) {
                                         if (isPersian) "توقف" else "Stop"
                                     } else {
-                                        if (isPersian) "تست همه" else "Test All"
+                                        if (isPersian) "تست ${selectedTarget.labelFa}" else "Test ${selectedTarget.labelEn}"
                                     },
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
@@ -363,37 +423,68 @@ fun PingDoctorApp() {
                     }
                 }
 
-                // 3. Config List Header
+                // 4. Config List Header & Quick Filter Pills
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (isPersian) "لیست کانفیگ‌ها (${configs.size})" else "Configs (${configs.size})",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = TextPrimary
-                        )
+                    val total = configs.size
+                    val aliveCount = configs.count { it.status == TestStatus.ALIVE }
+                    val deadCount = configs.count { it.status == TestStatus.DEAD }
 
-                        if (configs.isNotEmpty()) {
-                            TextButton(
-                                onClick = { configs = emptyList() },
-                                colors = ButtonDefaults.textButtonColors(contentColor = TextSecondary)
-                            ) {
-                                Text(if (isPersian) "پاک کردن همه" else "Clear All", fontSize = 11.sp)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isPersian) "لیست کانفیگ‌ها (${displayedConfigs.size})" else "Configs (${displayedConfigs.size})",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = TextPrimary
+                            )
+
+                            if (configs.isNotEmpty()) {
+                                TextButton(
+                                    onClick = { configs = emptyList() },
+                                    colors = ButtonDefaults.textButtonColors(contentColor = TextSecondary)
+                                ) {
+                                    Text(if (isPersian) "پاک کردن همه" else "Clear All", fontSize = 11.sp)
+                                }
                             }
+                        }
+
+                        // Filter Pills
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            FilterChip(
+                                selected = filterMode == "ALL",
+                                onClick = { filterMode = "ALL" },
+                                label = { Text(if (isPersian) "همه ($total)" else "All ($total)", fontSize = 11.sp) },
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            FilterChip(
+                                selected = filterMode == "ALIVE",
+                                onClick = { filterMode = "ALIVE" },
+                                label = { Text("🟢 " + if (isPersian) "سالم ($aliveCount)" else "Alive ($aliveCount)", fontSize = 11.sp) },
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            FilterChip(
+                                selected = filterMode == "DEAD",
+                                onClick = { filterMode = "DEAD" },
+                                label = { Text("🔴 " + if (isPersian) "سوخته ($deadCount)" else "Dead ($deadCount)", fontSize = 11.sp) },
+                                shape = RoundedCornerShape(8.dp)
+                            )
                         }
                     }
                 }
 
                 // Empty State
-                if (configs.isEmpty()) {
+                if (displayedConfigs.isEmpty()) {
                     item {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 24.dp),
+                                .padding(vertical = 20.dp),
                             colors = CardDefaults.cardColors(containerColor = CardBg.copy(alpha = 0.5f)),
                             shape = RoundedCornerShape(16.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
@@ -412,7 +503,11 @@ fun PingDoctorApp() {
                                     modifier = Modifier.size(44.dp)
                                 )
                                 Text(
-                                    text = if (isPersian) "کانفیگی وارد نشده است" else "No configs added",
+                                    text = if (configs.isEmpty()) {
+                                        if (isPersian) "کانفیگی وارد نشده است" else "No configs added"
+                                    } else {
+                                        if (isPersian) "موردی با این فیلتر یافت نشد" else "No items in this filter"
+                                    },
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary
                                 )
@@ -428,7 +523,7 @@ fun PingDoctorApp() {
                 }
 
                 // Config Items
-                items(configs, key = { it.id }) { item ->
+                items(displayedConfigs, key = { it.id }) { item ->
                     ConfigItemRow(
                         item = item,
                         isPersian = isPersian,
@@ -459,7 +554,7 @@ fun MetricBox(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(text = title, fontSize = 11.sp, color = TextSecondary)
-        Text(text = value, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = color)
+        Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = color)
     }
 }
 
@@ -555,6 +650,13 @@ fun ConfigItemRow(
                 when (item.status) {
                     TestStatus.ALIVE -> {
                         val isFast = item.pingMs < 600
+                        val targetIcon = when (item.testedService) {
+                            TargetService.YOUTUBE -> "▶️ "
+                            TargetService.GOOGLE -> "🌐 "
+                            TargetService.TELEGRAM -> "✈️ "
+                            TargetService.CLOUDFLARE -> "⚡ "
+                            null -> ""
+                        }
                         Surface(
                             shape = RoundedCornerShape(8.dp),
                             color = if (isFast) EmeraldFast.copy(alpha = 0.15f) else AmberMedium.copy(alpha = 0.15f),
@@ -564,7 +666,7 @@ fun ConfigItemRow(
                             )
                         ) {
                             Text(
-                                text = "${item.pingMs} ms",
+                                text = "$targetIcon${item.pingMs} ms",
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
