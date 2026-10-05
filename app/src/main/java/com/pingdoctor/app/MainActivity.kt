@@ -306,11 +306,11 @@ fun PingDoctorApp() {
 
                 // 3. Action Buttons Section
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Row 1: Paste & Import Sub & Test
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        // Row 1: Paste & Import Sub
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             // Paste Button
                             Button(
@@ -335,64 +335,64 @@ fun PingDoctorApp() {
                                         }
                                     }
                                 },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).height(46.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = CardBg),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
                             ) {
-                                Icon(Icons.Default.ContentPaste, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(if (isPersian) "پیست" else "Paste", fontSize = 11.sp, color = TextPrimary)
+                                Icon(Icons.Default.ContentPaste, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (isPersian) "پیست کلیپ‌بورد" else "Paste Clipboard", fontSize = 12.sp, color = TextPrimary)
                             }
 
                             // Sub URL Button
                             Button(
                                 onClick = { showSubDialog = true },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).height(46.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = CardBg),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
                             ) {
-                                Icon(Icons.Default.Download, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(if (isPersian) "لینک ساب" else "Sub URL", fontSize = 11.sp, color = TextPrimary)
-                            }
-
-                            // Start / Stop Test Button
-                            Button(
-                                onClick = {
-                                    if (isTesting) stopTesting() else startTesting()
-                                },
-                                modifier = Modifier.weight(1.2f),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isTesting) RoseDead else CyanPrimary
-                                )
-                            ) {
-                                Icon(
-                                    imageVector = if (isTesting) Icons.Default.Stop else Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    tint = DarkBg,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = if (isTesting) {
-                                        if (isPersian) "توقف" else "Stop"
-                                    } else {
-                                        if (isPersian) "تست ${selectedTarget.labelFa}" else "Test ${selectedTarget.labelEn}"
-                                    },
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = DarkBg
-                                )
+                                Icon(Icons.Default.Download, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (isPersian) "لینک سابسکریپشن" else "Import Sub URL", fontSize = 12.sp, color = TextPrimary)
                             }
                         }
 
-                        // Row 2: Sort by Ping & Purge Dead & Copy Alive & Export Sub
+                        // Big Hero Button: Start / Stop Test
+                        Button(
+                            onClick = {
+                                if (isTesting) stopTesting() else startTesting()
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isTesting) RoseDead else CyanPrimary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = if (isTesting) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = DarkBg,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isTesting) {
+                                    if (isPersian) "توقف فرایند تست" else "Stop Testing"
+                                } else {
+                                    if (isPersian) "🚀 شروع تست زنده اتصال به ${selectedTarget.labelFa}" else "Start ${selectedTarget.labelEn} Real Test"
+                                },
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = DarkBg
+                            )
+                        }
+
+                        // Secondary actions: 2 rows of 2 buttons (Plenty of room!)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             // Sort by Ping
                             OutlinedButton(
@@ -409,14 +409,14 @@ fun PingDoctorApp() {
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).height(42.dp),
                                 shape = RoundedCornerShape(10.dp),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
                                 enabled = configs.any { it.status == TestStatus.ALIVE }
                             ) {
-                                Icon(Icons.Default.Sort, contentDescription = null, tint = CyanLight, modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(if (isPersian) "سورت" else "Sort", fontSize = 10.sp, color = TextPrimary)
+                                Icon(Icons.Default.Sort, contentDescription = null, tint = CyanLight, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (isPersian) "مرتب‌سازی پینگ" else "Sort by Ping", fontSize = 11.sp, color = TextPrimary)
                             }
 
                             // Purge Dead
@@ -431,17 +431,22 @@ fun PingDoctorApp() {
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).height(42.dp),
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = RoseDead),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, RoseDead.copy(alpha = 0.5f)),
                                 enabled = configs.any { it.status == TestStatus.DEAD }
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(if (isPersian) "حذف سوخته" else "Purge", fontSize = 10.sp)
+                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (isPersian) "پاکسازی سوخته‌ها" else "Purge Dead", fontSize = 11.sp)
                             }
+                        }
 
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
                             // Copy Working
                             OutlinedButton(
                                 onClick = {
@@ -456,15 +461,15 @@ fun PingDoctorApp() {
                                         ).show()
                                     }
                                 },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).height(42.dp),
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = EmeraldFast),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldFast.copy(alpha = 0.5f)),
                                 enabled = configs.any { it.status == TestStatus.ALIVE }
                             ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(if (isPersian) "کپی سالم‌ها" else "Copy", fontSize = 10.sp)
+                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (isPersian) "کپی کانفیگ‌های سالم" else "Copy Alive", fontSize = 11.sp)
                             }
 
                             // Export Sub Base64
@@ -481,15 +486,15 @@ fun PingDoctorApp() {
                                         ).show()
                                     }
                                 },
-                                modifier = Modifier.weight(1.1f),
+                                modifier = Modifier.weight(1f).height(42.dp),
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = CyanLight),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, CyanLight.copy(alpha = 0.5f)),
                                 enabled = configs.any { it.status == TestStatus.ALIVE }
                             ) {
-                                Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(if (isPersian) "اکسپورت ساب" else "Export Sub", fontSize = 10.sp)
+                                Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (isPersian) "اکسپورت سابسکریپشن" else "Export Sub", fontSize = 11.sp)
                             }
                         }
                     }
@@ -776,7 +781,9 @@ fun MetricBox(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(text = title, fontSize = 11.sp, color = TextSecondary)
-        Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = color)
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = color)
+        }
     }
 }
 
@@ -889,13 +896,23 @@ fun ConfigItemRow(
                                 if (isFast) EmeraldFast.copy(alpha = 0.6f) else AmberMedium.copy(alpha = 0.6f)
                             )
                         ) {
-                            Text(
-                                text = "$targetIcon${item.pingMs} ms",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isFast) EmeraldFast else AmberMedium
-                            )
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    if (targetIcon.isNotBlank()) {
+                                        Text(text = targetIcon.trim(), fontSize = 11.sp)
+                                    }
+                                    Text(
+                                        text = "${item.pingMs} ms",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isFast) EmeraldFast else AmberMedium
+                                    )
+                                }
+                            }
                         }
                     }
                     TestStatus.DEAD -> {

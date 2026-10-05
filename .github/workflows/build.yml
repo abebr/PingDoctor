@@ -39,15 +39,14 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
       with:
-        tag_name: v1.2.0
-        name: "PingDoctor v1.2.0 - Sub Manager & QR Code"
+        tag_name: v1.2.1
+        name: "PingDoctor v1.2.1 - Responsive UI & BiDi Fix"
         body: |
-          ### ⚡ PingDoctor v1.2.0 - Subscription Importer & QR Code Generator
-          - **Subscription URL Importer**: Paste subscription HTTP/HTTPS URLs to fetch & decode automatically
-          - **Sort by Latency**: One-tap sort from fastest to slowest
-          - **QR Code Sharing**: Tap any config to display a shareable QR Code on screen
-          - **Clean Base64 Sub Export**: Copy alive configs as a clean subscription payload
-          - **YouTube & Telegram Target Testing**
+          ### ⚡ PingDoctor v1.2.1 - Responsive UI & RTL/BiDi Alignment
+          - **Responsive Action Grid**: Replaced cramped 4-button row with spacious 2x2 grid and full-width Hero Test button
+          - **No Broken Persian Words**: Words no longer wrap or truncate vertically
+          - **BiDi Latency Alignment**: Fixed `ms 378` and parentheses misalignment to standard `378 ms`
+          - **Subscription URL Importer & QR Code Generator**
         files: app/build/outputs/apk/debug/app-debug.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
